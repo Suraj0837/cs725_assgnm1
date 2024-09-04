@@ -2,9 +2,64 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-np.random.seed(2024)
+class LinearRegression:
+  def __init__(self):
+    '''
+    Initializing the parameters of the model
 
-from closedForm import LinearRegressionClosedForm
+    Returns:
+      None
+    '''
+    self.weights = None
+
+  def fit(self, X, y):
+    '''
+    This function is used to obtain the weights of the model using closed form solution.
+
+    Args:
+      X : 2D numpy array of training set data points. Dimensions (n x (d+1))
+      y : 2D numpy array of target values in the training dataset. Dimensions (n x 1)
+
+    Returns :
+      None
+    '''
+    # Calculate the weights
+
+    X_T = X.T
+    X_d = np.matmul(X_T, X)
+    
+
+    if np.linalg.det(X_d) == 0:
+       raise ValueError("The matrix is singular and cannot be inverted.")
+       
+    X_d_inv = np.linalg.inv(X_d)
+    X_dd = np.matmul(X_d_inv, X_T)
+    self.weights = np.matmul(X_dd, y)
+
+    return
+    raise NotImplementedError()
+
+  def predict(self, X):
+    '''
+    This function is used to predict the target values for the given set of feature values
+
+    Args:
+      X: 2D numpy array of data points. Dimensions (n x (d+1))
+
+    Returns:
+      2D numpy array of predicted target values. Dimensions (n x 1)
+    '''
+    # Write your code here
+
+    return np.matmul(X, self.weights)
+  
+  def regularize(self, X_validation, y_validation):
+      n, m = X_validation.shape()
+      I = np.eye(m)  # Identity matrix
+      I[0, 0] = 0
+      lamb = 0.5
+      self.weights = np.linalg.inv(X_validation.T @ X_validation + lamb * I) @ X_validation.T @ y_validation
+
 
 def transform_input(x):
     '''
@@ -47,21 +102,28 @@ def read_dataset(filepath):
       
     '''
     # Write your code here
+    if "train.csv" in filepath:
+      dataset = pd.read_csv(filepath)
+      split_index =  int(len(dataset) * 0.8)
+      x = dataset.drop(['ID', 'score'], axis=1).values
+      y = dataset['score'].values
 
-    dataset = pd.read_csv(filepath)
-    split_index =  int(len(dataset) * 0.8)
-    x = dataset.drop(['ID', 'score'], axis=1).values
-    y = dataset['score'].values
-
-    x_train = x[:split_index]
-    y_train = y[:split_index]
+      # x_train = x[:split_index]
+      # y_train = y[:split_index]
 
 
-    x_test = x[split_index:]
-    y_test = y[split_index:]
-    # y_test = np.array(dataset['y'][split_index:][1:].values.reshape(-1, 64))
-
-    return x_train, y_train, x_test, y_test
+      # x_test = x[split_index:]
+      # y_test = y[split_index:]
+      # y_test = np.array(dataset['y'][split_index:][1:].values.reshape(-1, 64))
+      # return x_train, y_train, x_test, y_test
+      return x, y
+    
+    if "test.csv" in filepath:
+      dataset = pd.read_csv(filepath)
+      x = dataset.drop(['ID'], axis=1).values
+      ID = np.array(dataset['ID'].values)
+      # y_test = np.array(dataset['y'][split_index:][1:].values.reshape(-1, 64))
+      return x, ID
     raise NotImplementedError()
 
 
@@ -101,16 +163,20 @@ if __name__ == '__main__':
     
     print(RESET +  "Loading dataset: ",end="")
     try:
-        X_train, y_train, X_validation, y_validation = read_dataset('/home/surajp2909/Sem1/fml/assgn1/assgmt1/train.csv')
+        X_train, y_train = read_dataset('train.csv')
+        X_test, ID = read_dataset('test.csv')
+        # X_train, y_train, X_validation, y_validation = read_dataset('train.csv')
+        # X_test, ID = read_dataset('test.csv')
+
         print(GREEN + "done")
     except Exception as e:
         print(RED + "failed")
         print(e)
         exit()
-    
+
     print(RESET +  "Plotting dataset: ",end="")
     try:
-        plot_dataset(X_train, y_train)
+        # plot_dataset(X_train, y_train)
         print(GREEN + "done")
     except Exception as e:
         print(RED + "failed")
@@ -119,8 +185,8 @@ if __name__ == '__main__':
     
     print(RESET + "Performing input transformation: ", end="")
     try:
-        X_train = transform_input(X_train)
-        X_test = transform_input(X_validation)
+        # X_train = transform_input(X_train)
+        # X_test = transform_input(X_validation)
         print(GREEN + "done")
     except Exception as e:
         print(RED + "failed")
@@ -129,8 +195,17 @@ if __name__ == '__main__':
         
     print(RESET + "Caclulating weights: ", end="")
     try:
-        linear_reg = LinearRegressionClosedForm()
+        linear_reg = LinearRegression()
         linear_reg.fit(X_train,y_train)
+        print(GREEN + "done")
+    except Exception as e:
+        print(RED + "failed")
+        print(e)
+        exit()
+
+    print(RESET +  "Regularizing: ",end="")
+    try:
+        linear_reg.regularize(X_validation, y_validation)
         print(GREEN + "done")
     except Exception as e:
         print(RED + "failed")
@@ -140,10 +215,20 @@ if __name__ == '__main__':
     print(RESET + "Checking closeness: ", end="")
     try:
         y_hat = linear_reg.predict(X_test)
-        if np.allclose(y_hat, y_validation, atol=1e-02):
-          print(GREEN + "done")
-        else:
-          print(RED + "failed")
+        print(GREEN + "done")
+        
+    except Exception as e:
+        print(RED + "failed")
+        print(e)
+        exit()
+
+    print(RESET + "Exporting predicted values: ", end="")
+    try:
+        scores = np.round(y_hat).astype(int)
+        f_scores = pd.DataFrame({'ID': ID, 'score': scores})
+        f_scores.to_csv('scores.csv', index=False)
+        print(GREEN + "done")
+        
     except Exception as e:
         print(RED + "failed")
         print(e)
