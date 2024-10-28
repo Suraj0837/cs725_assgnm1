@@ -138,27 +138,25 @@ class NN:
         ## sigmoid-based binary cross-entropy loss
         ## Hint: When computing the derivative of the cross-entropy loss, don't forget to 
         ## divide the gradients by N (number of examples)  
-        
-        
-        ## TODO 4b: Next, compute gradients for all weights and biases for all layers
-        ## Hint: Start from the output layer and move backwards to the first hidden layer
         self.grad_weights = [0] * len(self.weights)
         self.grad_biases = [0] * len(self.biases)
         N = len(y)
         y_np = np.array(y)
         y_reshaped = y_np.reshape(-1, 1)
 
-        # Output layer
-        delta_output = -(y_reshaped / self.a[-1] - (1 - y_reshaped) / (1 - self.a[-1])) / N
-        self.grad_weights[-1] = np.dot(self.a[-2].T, delta_output)
-        self.grad_biases[-1] = np.sum(delta_output, axis=0, keepdims=True).T
+        d_output = -(y_reshaped / self.a[-1] - (1 - y_reshaped) / (1 - self.a[-1])) / N
+        self.grad_weights[-1] = np.dot(self.a[-2].T, d_output)
+        self.grad_biases[-1] = np.sum(d_output, axis=0, keepdims=True).T
         
-        # Backprop
+        
+        ## TODO 4b: Next, compute gradients for all weights and biases for all layers
+        ## Hint: Start from the output layer and move backwards to the first hidden layer
+        
         for i in reversed(range(len(self.weights) - 1)):
-            delta_hidden = np.dot(delta_output, self.weights[i + 1].T) * self.activation_derivatives[i](self.z[i])
-            self.grad_weights[i] = np.dot(self.a[i].T, delta_hidden)
-            self.grad_biases[i] = np.sum(delta_hidden, axis=0, keepdims=True).T
-            delta_output = delta_hidden
+            d_hidden = np.dot(d_output, self.weights[i + 1].T) * self.activation_derivatives[i](self.z[i])
+            self.grad_weights[i] = np.dot(self.a[i].T, d_hidden)
+            self.grad_biases[i] = np.sum(d_hidden, axis=0, keepdims=True).T
+            d_output = d_hidden
 
         return self.grad_weights, self.grad_biases
 
@@ -205,23 +203,19 @@ class NN:
 
         if (gd_flag == 1):
             for i in range(len(weights)):
-                # Update each layer's weights and biases
                 updated_W.append(weights[i] - learning_rate * delta_weights[i])
                 updated_B.append(biases[i] - learning_rate * delta_biases[i])
         elif (gd_flag == 2):
             for i in range(len(weights)):
-                # Update each layer's weights and biases\
                 updated_W.append(weights[i] - learning_rate * delta_weights[i])
                 updated_B.append(biases[i] - learning_rate * delta_biases[i])
 
             optimizer_params['learning_rate'] = learning_rate * np.exp(-1 * decay_constant * epoch)
         elif (gd_flag == 3):
             for i in range(len(weights)):
-                # Momentum update for weights
                 optimizer_params['velocity_W'][i] = momentum * optimizer_params['velocity_W'][i] - learning_rate * delta_weights[i]
                 updated_W.append(weights[i] + optimizer_params['velocity_W'][i])
             
-                # Momentum update for biases
                 optimizer_params['velocity_B'][i] = momentum * optimizer_params['velocity_B'][i] - learning_rate * delta_biases[i]
                 updated_B.append(biases[i] + optimizer_params['velocity_B'][i])
         
@@ -250,7 +244,6 @@ class NN:
         updated_W = []
         updated_B = []
 
-        # Initialize first and second moment vectors if not already present
         if 'm_W' not in optimizer_params:
             optimizer_params['m_W'] = [np.zeros_like(w) for w in weights]
         if 'm_B' not in optimizer_params:
@@ -260,31 +253,25 @@ class NN:
         if 'v_B' not in optimizer_params:
             optimizer_params['v_B'] = [np.zeros_like(b) for b in biases]
     
-        # Increment timestep
         if 't' not in optimizer_params:
             optimizer_params['t'] = 1
         else:
             optimizer_params['t'] += 1
         t = optimizer_params['t']
     
-        # Update weights and biases using Adam optimization rules
         for i in range(len(weights)):
-            # Update biased first moment estimate (momentum term)
             optimizer_params['m_W'][i] = beta1 * optimizer_params['m_W'][i] + (1 - beta1) * delta_weights[i]
             optimizer_params['m_B'][i] = beta1 * optimizer_params['m_B'][i] + (1 - beta1) * delta_biases[i]
         
-            # Update biased second raw moment estimate (adaptive term)
             optimizer_params['v_W'][i] = beta2 * optimizer_params['v_W'][i] + (1 - beta2) * (delta_weights[i] ** 2)
             optimizer_params['v_B'][i] = beta2 * optimizer_params['v_B'][i] + (1 - beta2) * (delta_biases[i] ** 2)
 
-            # Compute bias-corrected first and second moments
             m_hat_W = optimizer_params['m_W'][i] / (1 - beta1 ** t)
             m_hat_B = optimizer_params['m_B'][i] / (1 - beta1 ** t)
         
             v_hat_W = optimizer_params['v_W'][i] / (1 - beta2 ** t)
             v_hat_B = optimizer_params['v_B'][i] / (1 - beta2 ** t)
         
-            # Update weights and biases using Adam rule
             updated_W.append(weights[i] - learning_rate * m_hat_W / (np.sqrt(v_hat_W) + eps))
             updated_B.append(biases[i] - learning_rate * m_hat_B / (np.sqrt(v_hat_B) + eps))
 
@@ -364,7 +351,27 @@ if __name__ == "__main__":
     hidden_dims = [4, 2] # the last layer has just 1 neuron for classification
     num_epochs = 30
     batch_size = 100
-    activations = ['relu', 'relu']
+    activations = ['sigmoid', 'sigmoid']
+
+    ## vanilla gd
+    optimizer = "bgd"
+    optimizer_params = {
+        'learning_rate': 0.01,
+        'gd_flag': 1,
+        'momentum': 0.0003,
+        'decay_constant': 0.05
+    }
+
+    ## Vanilla gd with decay
+    # optimizer = "bgd"
+    # optimizer_params = {
+    #     'learning_rate': 0.1,
+    #     'gd_flag': 2,
+    #     'momentum': 0.0003,
+    #     'decay_constant': 0.05
+    # }
+
+    # GD with momentum
     # optimizer = "bgd"
     # optimizer_params = {
     #     'learning_rate': 0.01,
@@ -374,13 +381,13 @@ if __name__ == "__main__":
     # }
     
     # For Adam optimizer you can use the following
-    optimizer = "adam"
-    optimizer_params = {
-        'learning_rate': 0.05,
-        'beta1' : 0.01,
-        'beta2' : 0.1,
-        'eps' : 1e-8
-    }
+    # optimizer = "adam"
+    # optimizer_params = {
+    #     'learning_rate': 0.005,
+    #     'beta1' : 0.3,
+    #     'beta2' : 0.8,
+    #     'eps' : 1e-3
+    # }
 
      
     model = NN(input_dim, hidden_dims)
