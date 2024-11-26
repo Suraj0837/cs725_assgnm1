@@ -348,15 +348,15 @@ if __name__ == "__main__":
     input_dim = X_train.shape[1]
     X_train = X_train**2
     X_eval = X_eval**2
-    hidden_dims = [4, 2] # the last layer has just 1 neuron for classification
+    hidden_dims = [4, 5, 2] # the last layer has just 1 neuron for classification
     num_epochs = 30
     batch_size = 100
-    activations = ['sigmoid', 'sigmoid']
+    activations = ['sigmoid', 'sigmoid', 'sigmoid']
 
     ## vanilla gd
     optimizer = "bgd"
     optimizer_params = {
-        'learning_rate': 0.01,
+        'learning_rate': 0.05,
         'gd_flag': 1,
         'momentum': 0.0003,
         'decay_constant': 0.05
